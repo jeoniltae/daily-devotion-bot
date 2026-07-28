@@ -79,6 +79,26 @@ npm i -D typescript @types/node tsx
 
 디렉토리도 `src/send.ts` 하나 + `.github/workflows/` cron 워크플로 하나로 시작한다.
 
+### Node 버전 고정 — `24` (Active LTS)
+
+최소 요건은 아래 두 가지이며, 이보다 낮으면 코드가 동작하지 않는다.
+
+- 내장 `fetch` — Node 18+
+- `node --env-file=.env` — Node 20.6+
+
+그중 **24**를 쓴다. 2026-07 기준 Active LTS이며 지원이 2028-04까지다.
+(Node 20은 2026-04 EOL로 보안 패치가 끊겼고, 22는 Maintenance 단계다.)
+
+고정 위치는 세 곳이며 **항상 같은 값으로 유지한다.**
+
+- `package.json` 의 `"engines": { "node": ">=24" }`
+- GitHub Actions 의 `actions/setup-node` → `node-version: 24`
+- 로컬 개발 환경 — `.nvmrc` 에 `24`
+
+**패치 버전까지 고정하지 않는다.** `24.1.0`처럼 세 자리를 박으면 보안 패치가 나와도 자동으로 올라오지 않고, 이런 소규모 자동화에서 그걸 수동으로 챙길 일이 없다. 의존성 재현성은 `package-lock.json`이 담당한다.
+
+로컬과 Actions의 Node 버전이 다르면 **로컬에서 통과한 코드가 Actions에서만 깨진다.**
+
 ### 대시보드를 만들게 될 경우 (3단계)
 
 루트에 Vite를 까는 것이 아니라 `dashboard/` 등 **별도 디렉토리(또는 별도 저장소)로 분리**한다.
@@ -203,7 +223,9 @@ npm i -D typescript @types/node tsx
 
 ### 1단계 — 발송 파이프라인 (핵심, 먼저 완성)
 
+- 프로젝트 초기화 — `npm init`, `tsconfig.json`, Node `24` 고정, 의존성 설치
 - 텔레그램 봇 생성 + 채널에 관리자로 추가
+- 테스트용 비공개 채널 생성 + 봇 관리자 추가 (실채널 발송 사고 방지)
 - 스프레드시트에 묵상글 여러 편 직접 등록 (`id`, `body` 등)
 - 구글 서비스 계정 생성 + 시트 편집 권한 부여
 - 발송 스크립트(TS) 작성: 다음 글 선택 → 발송 → status/sentAt 갱신
