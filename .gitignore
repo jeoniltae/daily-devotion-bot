@@ -49,6 +49,8 @@ coverage/
 .vscode/
 .idea/
 .claude/settings.local.json
+checklist.md
+docs/context-notes.md
 
 # Windows
 Thumbs.db
