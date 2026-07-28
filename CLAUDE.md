@@ -69,13 +69,19 @@ Vite는 브라우저용 프론트엔드를 번들링·개발서버로 띄우는 
 ```
 npm init -y
 npm i googleapis
-npm i -D typescript @types/node tsx
+npm i -D typescript @types/node
 ```
 
 - **텔레그램**: 라이브러리 불필요. Node 18+ 내장 `fetch`로 `sendMessage` POST 한 번이면 충분.
   (`node-telegram-bot-api`는 폴링·핸들러용이라 여기선 과잉.)
 - **구글 시트**: `googleapis` — 서비스 계정 인증 + 읽기/쓰기가 모두 필요하므로 도입 가치 있음.
-- **dotenv 불필요**: 로컬 테스트는 `node --env-file=.env`로 처리.
+- **dotenv 불필요**: 로컬 테스트는 `node --env-file-if-exists=.env`로 처리.
+  `-if-exists` 를 쓰면 `.env` 가 없는 Actions 환경에서도 같은 명령이 그대로 동작한다.
+- **`tsx` 불필요**: Node 24는 **TypeScript 를 네이티브로 실행**한다 (타입 스트리핑 기본 활성화).
+  `node src/send.ts` 가 그대로 돌아가므로 런타임 트랜스파일러가 필요 없다.
+  대신 타입 스트리핑이 지우지 못하는 문법(enum·namespace·매개변수 프로퍼티)은 쓸 수 없다.
+  `tsconfig.json` 의 `erasableSyntaxOnly: true` 가 이를 컴파일 단계에서 막는다.
+  `typescript` 는 실행이 아니라 **타입 검사(`npm run typecheck`)** 용으로만 쓴다.
 
 디렉토리도 `src/send.ts` 하나 + `.github/workflows/` cron 워크플로 하나로 시작한다.
 

@@ -1,0 +1,21 @@
+{
+  "name": "daily-devotion-bot",
+  "version": "1.0.0",
+  "description": "기독교 묵상글을 텔레그램 채널에 매일 자동 발송하는 봇",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "send": "node --env-file-if-exists=.env src/send.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "googleapis": "^161.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
