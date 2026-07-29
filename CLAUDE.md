@@ -48,7 +48,7 @@
 - **스케줄러**: GitHub Actions (`schedule` cron)
 - **데이터 저장소**: 구글 스프레드시트 (Google Sheets API + 서비스 계정)
 - **발송 채널**: 텔레그램 Bot API (`sendMessage`)
-- **저장소**: GitHub 저장소 1개 (비공개 Private 권장)
+- **저장소**: GitHub 저장소 1개 (**공개 Public**)
 
 > 향후 관리 대시보드를 만들 경우의 스택은 **React + TypeScript**.
 > 다만 현 단계에서는 대시보드를 만들지 않음 (아래 로드맵 참고).
@@ -161,7 +161,7 @@ npm i -D typescript @types/node
 - **cron 시간은 UTC 기준.** 한국 시간(KST)은 UTC+9.
   - 예: 한국 아침 07:00 발송 → cron은 전날 `21:00 UTC` (`0 21 * * *`).
 - **주의**: GitHub Actions cron은 정시에 정확히 실행되지 않고 수 분~수십 분 지연될 수 있음. 묵상 발송엔 허용 가능한 오차.
-- 무료 사용량(비공개 저장소 월 2,000분) 안에서 충분.
+- **공개 저장소는 Actions 사용 시간이 무료·무제한**이므로 사용량 걱정이 없다.
 
 ---
 
@@ -181,7 +181,18 @@ npm i -D typescript @types/node
   - `TELEGRAM_CHANNEL_ID` — 발송 대상 채널 ID
   - 구글 서비스 계정 인증 정보 (JSON 키 등)
 - 스크립트에서는 `process.env.*`로 주입받아 사용.
-- 저장소는 **비공개(Private)** 권장.
+
+### 저장소는 공개(Public)로 운영한다
+
+Secrets 는 암호화되어 저장되며 **공개 저장소에서도 값이 노출되지 않는다.** 다만 공개 전환에는 아래 전제가 따른다.
+
+- **커밋 이력에 비밀정보가 한 번도 없어야 한다.** 공개 후에는 삭제해도 이미 복제·크롤링된 사본을 회수할 수 없다.
+  - 확인 완료 — `.env`·`secrets/`·키 파일이 이력에 등장한 적 없음.
+- **Actions 실행 로그가 전부 공개된다.** GitHub 이 등록된 Secret 값은 `***` 로 가리지만, 그 외의 출력은 그대로 노출된다.
+  → 토큰·채널 ID·서비스 계정 정보를 직접 `console.log` 하지 않는다. (docs/coding-guidelines.md 참고)
+- **포크에서 실행되는 워크플로에 Secrets 를 넘기지 않는다.**
+  `pull_request` / `pull_request_target` 트리거는 추가하지 않는다. 발송 워크플로는 `schedule` 과 `workflow_dispatch` 만 쓴다.
+- 이점 — 공개 저장소는 **Actions 사용 시간이 무료·무제한**이다.
 
 ### 구글 서비스 계정
 
