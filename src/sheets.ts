@@ -21,12 +21,39 @@ export type Devotion = {
   readonly sentAt: string;
 };
 
+export const SENT_STATUS = '발송됨';
+
 const isBlank = (value: unknown): boolean =>
   value === undefined || value === null || String(value).trim() === '';
 
+const sheetsClient = () =>
+  google.sheets({ version: 'v4', auth: new google.auth.GoogleAuth({ scopes: SCOPES }) });
+
+// 헤더 이름 → 열 위치. 열 순서에 의존하지 않기 위해 매번 헤더로 찾는다.
+const toColumnMap = (headerRow: readonly unknown[]): Map<string, number> => {
+  const columnOf = new Map<string, number>();
+  headerRow.forEach((name, index) => {
+    if (!isBlank(name)) {
+      columnOf.set(String(name).trim(), index);
+    }
+  });
+  return columnOf;
+};
+
+// 0-based 열 위치를 A1 표기의 열 문자로 바꾼다. (0 → A, 26 → AA)
+const columnLetter = (index: number): string => {
+  let remaining = index + 1;
+  let letter = '';
+  while (remaining > 0) {
+    const digit = (remaining - 1) % 26;
+    letter = String.fromCharCode(65 + digit) + letter;
+    remaining = Math.floor((remaining - 1) / 26);
+  }
+  return letter;
+};
+
 export const readDevotions = async (spreadsheetId: string): Promise<Devotion[]> => {
-  const auth = new google.auth.GoogleAuth({ scopes: SCOPES });
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = sheetsClient();
 
   const response = await sheets.spreadsheets.values.get({ spreadsheetId, range: SHEET_NAME });
   const rows: unknown[][] = response.data.values ?? [];
@@ -36,13 +63,7 @@ export const readDevotions = async (spreadsheetId: string): Promise<Devotion[]> 
     throw new Error(`시트 '${SHEET_NAME}' 가 비어 있다. 1행에 헤더가 있어야 한다.`);
   }
 
-  // 열 순서에 의존하지 않도록 헤더 이름 → 열 위치로 매핑한다.
-  const columnOf = new Map<string, number>();
-  headerRow.forEach((name, index) => {
-    if (!isBlank(name)) {
-      columnOf.set(String(name).trim(), index);
-    }
-  });
+  const columnOf = toColumnMap(headerRow);
 
   const missing = HEADERS.filter((header) => !columnOf.has(header));
   if (missing.length > 0) {
@@ -85,4 +106,44 @@ export const readDevotions = async (spreadsheetId: string): Promise<Devotion[]> 
   });
 
   return devotions;
+};
+
+// 발송 완료 표시. 이 행은 다음 실행부터 대기 목록에서 빠진다. (CLAUDE.md 5장)
+export const markSent = async (
+  spreadsheetId: string,
+  rowNumber: number,
+  sentAt: string,
+): Promise<void> => {
+  const sheets = sheetsClient();
+
+  // 읽을 때와 마찬가지로 열 위치를 헤더에서 다시 찾는다. 열을 옮겨도 엉뚱한 칸에 쓰지 않는다.
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${SHEET_NAME}!1:1`,
+  });
+  const columnOf = toColumnMap(response.data.values?.[0] ?? []);
+
+  const statusColumn = columnOf.get('status');
+  const sentAtColumn = columnOf.get('sentAt');
+  if (statusColumn === undefined || sentAtColumn === undefined) {
+    throw new Error(`시트 '${SHEET_NAME}' 에서 status/sentAt 열을 찾지 못했다.`);
+  }
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      // RAW — 구글 시트가 값을 날짜로 재해석하지 않고 쓴 그대로 남긴다.
+      valueInputOption: 'RAW',
+      data: [
+        {
+          range: `${SHEET_NAME}!${columnLetter(statusColumn)}${rowNumber}`,
+          values: [[SENT_STATUS]],
+        },
+        {
+          range: `${SHEET_NAME}!${columnLetter(sentAtColumn)}${rowNumber}`,
+          values: [[sentAt]],
+        },
+      ],
+    },
+  });
 };
