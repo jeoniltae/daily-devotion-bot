@@ -200,10 +200,13 @@ npm i -D typescript @types/node
 ## 8. 보안 (민감정보 관리)
 
 - **토큰·키를 코드에 직접 쓰지 않는다.** 반드시 **GitHub Secrets** 사용.
-- 저장소 → Settings → Secrets and variables → Actions 에 등록:
+- 저장소 → Settings → Secrets and variables → Actions 에 등록 (**4개**):
   - `TELEGRAM_BOT_TOKEN` — 텔레그램 봇 토큰
   - `TELEGRAM_CHANNEL_ID` — 발송 대상 채널 ID
-  - 구글 서비스 계정 인증 정보 (JSON 키 등)
+  - `GOOGLE_SHEET_ID` — 스프레드시트 ID
+  - `GOOGLE_SERVICE_ACCOUNT_JSON` — 서비스 계정 키 JSON **전문**
+- 로컬 `.env` 는 키 파일 **경로**(`GOOGLE_APPLICATION_CREDENTIALS`)를 쓰지만,
+  Actions 에는 파일을 둘 수 없으므로 **JSON 내용 자체**를 Secret 으로 넣고 워크플로가 파일로 되살린다.
 - 스크립트에서는 `process.env.*`로 주입받아 사용.
 
 ### 저장소는 공개(Public)로 운영한다

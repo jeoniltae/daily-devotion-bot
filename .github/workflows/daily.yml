@@ -1,0 +1,54 @@
+# 매일 묵상글 1편을 텔레그램 채널로 발송하는 예약 워크플로
+
+name: 묵상글 발송
+
+on:
+  schedule:
+    # UTC 일~금 22:00 = KST 월~토 07:00. 일요일은 발송하지 않는다.
+    # 시각뿐 아니라 요일도 하루 앞으로 밀린다는 점에 주의. (CLAUDE.md 6장)
+    - cron: "0 22 * * 0-5"
+  workflow_dispatch:
+
+# 포크에서 온 코드로 Secrets 가 새지 않도록 pull_request 계열 트리거는 두지 않는다.
+# 저장소가 공개이므로 특히 중요하다. (CLAUDE.md 8장)
+permissions:
+  contents: read
+
+# 수동 실행과 예약 실행이 겹쳐 같은 글이 두 번 나가는 것을 막는다.
+# 취소하지 않고 줄을 세운다. 발송 도중 끊기면 시트 갱신이 누락될 수 있다.
+concurrency:
+  group: send-devotion
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # package.json 의 engines, .nvmrc 와 항상 같은 값을 유지한다.
+          node-version: "24"
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 서비스 계정 키 파일 생성
+        # 값을 run 안에 직접 펼치지 않고 env 로 넘긴다. 명령줄에 노출되지 않게 하기 위함이다.
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p secrets
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > secrets/service-account.json
+
+      - name: 발송
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: secrets/service-account.json
+        run: npm run send
